@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<!-- Required meta tags -->
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+	<!-- Bootstrap CSS -->
+	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.0/css/bootstrap.min.css" integrity="sha384-PDle/QlgIONtM1aqA2Qemk5gPOE7wFq8+Em+G/hmo5Iq0CCmYZLv3fVRDJ4MMwEA" crossorigin="anonymous">
+
+	<title>Question</title>
+</head>
+<body>
+	<main>
+		<div class="col-md-8" style="margin: 25px, align: center"> 
+			{% with messages = get_flashed_messages(with_categories=true) %}
+			{% if messages %}
+			{% for category, message in messages %}
+			<div class="alert alert-{{ category }}">
+				{{ message }}
+			</div>
+			{% endfor %}
+						<script>
+				
+					//confirm("Do you want to change your answer?");
+				
+			</script>
+			{% endif %}
+
+			{% endwith %}
+
+		</div>
+		<div style="margin: 25px">
+			<p> {{question}} </p>
+			<form method="POST" action="">
+				{{ form.hidden_tag() }}
+				<fieldset class="form-group" padding: 10px 20px;>
+					<legend >{{ legend }}</legend>
+					<div class="form-group">
+						{{ form.content.label(class="form-control-label") }}
+						{% if form.content.errors %}
+						{{ form.content(class="form-control form-control-lg is-invalid") }}
+						<div class="invalid-feedback">
+							{% for error in form.content.errors %}
+							<span>{{ error }}</span>
+							{% endfor %}
+						</div>
+						{% else %}
+						{{ form.content(class="form-control") }}
+						{% endif %}
+					</div>
+				</fieldset>
+				<div class="form-group" align="center">
+					{{ form.grade(class="btn btn-outline-info") }}
+					<br>
+					<br>
+					{{ form.submit(class="btn btn-outline-info") }}
+				</div>
+			</form>
+		</div>
+	</main>
+
+	<!-- Optional JavaScript -->
+	<!-- jQuery first, then Popper.js, then Bootstrap JS -->
+	<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+	<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.0/js/bootstrap.min.js" integrity="sha384-7aThvCh9TypR7fIc2HV4O/nFMVCBwyIUKL8XCtKE+8xgCgl/PQGuFsvShjr74PBp" crossorigin="anonymous"></script>
+
+	<script>
+	
+	/*Place Your Javascript Below This Line*/
+	var timerVar;
+
+// Your iframe must post multiple messages, as a JSON formatted string, back to the ASSISTments' Tutor.
+// All messages begin with the message version, currently AS.1, and an action key.
+// The required actions are:
+//
+// - "loaded"
+//    Your iframe sends this message exactly once.
+//    Tells the Tutor that the iframe loaded content from your server in a timely manner.
+//
+// - "heartbeat"
+//    Your iframe sends this message once every 10 seconds.
+//    Tells the Tutor your page continues to be active.
+//
+// - "completed"
+//    Your iframe sends this message exactly once.
+//    Tells the Tutor that the iframe the student has completed the task and returns an associated
+//    "score" which must be a value between 0.0 and 1.0. The leading 0 digit is required (ex: 0.75).
+
+var JSONpreface = '{ "version" : "AS.1", "action" : '
+
+// Sends a message from your iframe back to ASSISTments.
+// The URL provided _must_ match the URL of the ASSISTments server you are using.
+// If not, the problem will fail with an "Invalid Content" error saying:
+//    This Problem has inconsistent content.
+//    There are no registered URLs found.
+// For example, since the URL below says "www.assistments.org", you cannot run this on
+// "test1.assistments.org" unless you change the URL below to be test1.
+function iframeToParent(message){
+  window.parent.postMessage(message, "https://www.assistments.org");
+  }
+
+  // Sends the "heartbeat" message
+function iframeHeartbeat() {
+//console.log("heartbeat");
+  iframeToParent(JSONpreface +  '"heartbeat"}');
+}
+
+// Sends the "loaded" message and starts a timer to periodically send the
+// "heartbeat" message.
+function iframeLoaded(){
+  iframeToParent(JSONpreface + '"loaded" }');
+
+  timerVar = window.setInterval(iframeHeartbeat, 10000);
+  }
+
+
+
+// Sends the "completed" message and score.
+// Stops the "heartbeat" message.
+function iframeCompleted() {
+  //var score = document.getElementById("MyScore").value;
+
+  iframeToParent(JSONpreface + '"completed", '
+    + '"answer" : "<b>Student worked hard on this problem.</b>"}'
+    );
+
+  window.clearTimeout(timerVar);
+}
+
+var loaded = '${e://Field/loaded}';
+if (loaded !== 'loaded'){
+  iframeLoaded();
+  Qualtrics.SurveyEngine.setEmbeddedData('loaded', 'loaded');
+
+}
+
+</script>
+
+</body>
+</html>
