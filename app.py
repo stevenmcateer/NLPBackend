@@ -75,7 +75,7 @@ def home():
             form.content.data = ""
             submit=True
         flash(message, 'success')
-    return render_template('question.html', question=question, form=form, submit=true)
+    return render_template('question.html', question=question, form=form, submit=submit)
 
 
 
