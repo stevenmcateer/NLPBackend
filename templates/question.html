@@ -15,7 +15,7 @@
 		
 		{%if submit==True %}
 		<script>iframeToParent( {"version" : "AS.1", "action" : "completed", "answer" : "student entered: " + {{form.content.data}}}'</script>
-
+		{% endif %}
 		<div class="col-md-8" style="margin: 25px, align: center"> 
 			{% with messages = get_flashed_messages(with_categories=true) %}
 			{% if messages %}
