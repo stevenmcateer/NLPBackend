@@ -52,7 +52,7 @@ def home():
     problemId = request.args.get('p4')
     questionId = request.args.get('p5')
 
-
+    submit=False
 
     form = PostResponse()
     if form.validate_on_submit():
@@ -73,8 +73,9 @@ def home():
             db.session.add(response)
             db.session.commit()
             form.content.data = ""
+            submit=True
         flash(message, 'success')
-    return render_template('question.html', question=question, form=form)
+    return render_template('question.html', question=question, form=form, submit=submit)
 
 
 
