@@ -65,11 +65,11 @@ function iframeLoaded(){
 
 // Sends the "completed" message and score.
 // Stops the "heartbeat" message.
-function iframeCompleted() {
+function iframeCompleted(answer) {
   //var score = document.getElementById("MyScore").value;
 
   iframeToParent(JSONpreface + '"completed", '
-    + '"answer" : "<b>Student worked hard on this problem.</b>", "score" : 0.5}'
+    + '"answer" : '+ answer+', "score" : 0.5}'
     );
 
   window.clearTimeout(timerVar);
@@ -81,8 +81,8 @@ iframeLoaded()
 </script>
 		
 		{%if submit==True %}
-		<script>iframeCompleted()</script>
-		<h1> Submit is true </h1>
+		<script>iframeCompleted({{form.content.data}})</script>
+		
 		{% endif %}
 		<div class="col-md-8" style="margin: 25px, align: center"> 
 			{% with messages = get_flashed_messages(with_categories=true) %}
