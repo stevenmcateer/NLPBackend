@@ -81,7 +81,7 @@ iframeLoaded()
 </script>
 		
 		{%if submit==True %}
-		<script> answer = {{form.content.data}}
+		<script> answer = '{{form.content.data}}'
 			iframeCompleted(answer)
 		</script>
 		
