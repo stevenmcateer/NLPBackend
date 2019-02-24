@@ -72,7 +72,7 @@ def home():
             response = questionResponses(responseId=responseId,studentId=userReference, problemId=problemId,questionId=questionId,response=form.content.data)
             db.session.add(response)
             db.session.commit()
-            form.content.data = ""
+            
             submit=True
         flash(message, 'success')
     return render_template('question.html', question=question, form=form, submit=submit)
