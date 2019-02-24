@@ -81,7 +81,7 @@ function iframeCompleted(answer) {
 </script>
 		
 		{%if submit==True %}
-		<script>  iframeCompleted("testing")</script>
+		<script>  iframeCompleted({{form.content.data}})</script>
 		
 		{% endif %}
 		<div class="col-md-8" style="margin: 25px, align: center"> 
