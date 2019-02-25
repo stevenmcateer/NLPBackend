@@ -45,7 +45,7 @@ def findGroup(studentId):
     else: #Get this students group
         control = student[0].group
 
-    return control
+    return int(control)
 
 class PostResponse(FlaskForm):
     content = TextAreaField('Answer', validators=[DataRequired()])
@@ -71,6 +71,11 @@ def home():
     problemId = request.args.get('p4')
     questionId = request.args.get('p5')
 
+    if not userReference: #Allows testing without assistments
+        userReference = 14
+        questionId = 10
+        problemId = 21
+
     control = findGroup(userReference)
     submit = False
     form = PostResponse()
@@ -78,25 +83,19 @@ def home():
     if form.validate_on_submit():
         if form.grade.data:
             grade = model.calculateGrade(questionId)
-            message = 'Your rough estimated score is a ' + str(grade)
-           # Need to store this into into a db for each student/question 
-           # message2 =  'This is attempt #: ' +  str(responseCount)
-           # flash(message2, 'success')
-           # responseCount = responseCount + 1
-           # temp = questionResponses.query.filter_by(studentId=1, questionId=1 ).all()
-            if(problemId):
-                responseId = db.session.query(func.max(questionResponses.responseId)).scalar() + 1
-                response = questionResponses(responseId=responseId,studentId=userReference, problemId=problemId,questionId=questionId,response=form.content.data, grade=grade)
-                db.session.add(response)
-                db.session.commit()
+            responseCount = len(questionResponses.query.filter_by(studentId=userReference, questionId=questionId).all()) + 1
+            message = 'Your rough estimated score is a ' + str(grade) + ". This is attempt " + str(responseCount)
+            responseId = db.session.query(func.max(questionResponses.responseId)).scalar() + 1
+            response = questionResponses(responseId=responseId,studentId=userReference, problemId=problemId,questionId=questionId,response=form.content.data, grade=grade)
+            db.session.add(response)
+            db.session.commit()
 
         else:
             message = 'Your response has been saved! Please hit next problem to continue'
-            if(problemId):
-                responseId = db.session.query(func.max(questionResponses.responseId)).scalar() + 1
-                response = questionResponses(responseId=responseId,studentId=userReference, problemId=problemId,questionId=questionId,response=form.content.data)
-                db.session.add(response)
-                db.session.commit()
+            responseId = db.session.query(func.max(questionResponses.responseId)).scalar() + 1
+            response = questionResponses(responseId=responseId,studentId=userReference, problemId=problemId,questionId=questionId,response=form.content.data)
+            db.session.add(response)
+            db.session.commit()
             submit = True
 
         flash(message, 'success')
