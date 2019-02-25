@@ -12,8 +12,6 @@ app.config['SECRET_KEY'] = '5791628bb0b13ce0c676dfde280ba245'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
 db = SQLAlchemy(app)
 
-question = 'This is a question'
-
 class questionResponses(db.Model):
     responseId = db.Column(db.Integer, primary_key=True)
     studentId = db.Column(db.String(60), nullable=False)
@@ -102,7 +100,7 @@ def home():
             submit = True
 
         flash(message, 'success')
-    return render_template('question.html', question=question, form=form, submit=submit, control=control)
+    return render_template('question.html', question='Your question: ' + str(questionId), form=form, submit=submit, control=control)
 
 
 
