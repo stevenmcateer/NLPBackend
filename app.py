@@ -4,6 +4,7 @@ from wtforms import TextAreaField, SubmitField
 from wtforms.validators import DataRequired
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import func 
+from numpy import random
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = '5791628bb0b13ce0c676dfde280ba245'
@@ -12,6 +13,7 @@ db = SQLAlchemy(app)
 
 question = 'This is a question'
 responseCount=0;
+
 
 class questionResponses(db.Model):
     responseId = db.Column(db.Integer, primary_key=True)
@@ -53,20 +55,26 @@ def home():
     questionId = request.args.get('p5')
 
     submit=False
-
+    #this is temporty will need to create infustructure to get which group student is in
+    control = random.choice([True, False])
     form = PostResponse()
     if form.validate_on_submit():
         if form.grade.data:
-            grade = 2
-            message = 'Your rough estimated score is a 2' 
+            grade = random.randint(4)
+            global responseCount
+            message = 'Your rough estimated score is a ' + str(grade)
+           # Need to store this into into a db for each student/question 
+           # message2 =  'This is attempt #: ' +  str(responseCount)
+           # flash(message2, 'success')
+           # responseCount = responseCount + 1
             temp = questionResponses.query.filter_by(studentId=1, questionId=1 ).all()
             responseId = db.session.query(func.max(questionResponses.responseId)).scalar() + 1
 
-            response = questionResponses(responseId=responseId,studentId=userReference, problemId=problemId,questionId=questionId,response=form.content.data, grade=2)
+            response = questionResponses(responseId=responseId,studentId=userReference, problemId=problemId,questionId=questionId,response=form.content.data, grade=grade)
             db.session.add(response)
             db.session.commit()
         else:
-            message = 'Your response has been saved'
+            message = 'Your response has been saved! Please hit next peoblem to continue'
             
             responseId = db.session.query(func.max(questionResponses.responseId)).scalar() + 1
             response = questionResponses(responseId=responseId,studentId=userReference, problemId=problemId,questionId=questionId,response=form.content.data)
@@ -75,7 +83,7 @@ def home():
             
             submit=True
         flash(message, 'success')
-    return render_template('question.html', question=question, form=form, submit=submit)
+    return render_template('question.html', question=question, form=form, submit=submit, control = control)
 
 
 
