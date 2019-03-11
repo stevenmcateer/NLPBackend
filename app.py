@@ -99,7 +99,7 @@ def home():
             submit = True
 
         flash(message, 'success')
-    return render_template('question.html', question='Your question: ' + str(questionId), form=form, submit=submit, control=control)
+    return render_template('question.html', form=form, submit=submit, control=control)
 
 
 

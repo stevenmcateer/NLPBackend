@@ -69,7 +69,7 @@ function iframeCompleted(answer) {
   //var score = document.getElementById("MyScore").value;
 
   iframeToParent(JSONpreface + '"completed", '
-    + '"answer" : "'+ answer+'", "score" : 0.5}'
+    + '"answer" : "'+ answer+'", "score" : 1.0}'
     );
 
   window.clearTimeout(timerVar);
@@ -106,7 +106,7 @@ iframeLoaded()
 		</div>
 		{% if submit== False %}
 		<div style="margin: 25px">
-			<p> {{question}} </p>
+			
 			<form method="POST" action="">
 				{{ form.hidden_tag() }}
 				<fieldset class="form-group" padding: 10px 20px;>
