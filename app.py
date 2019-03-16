@@ -107,8 +107,8 @@ def home():
             else:
                 firstResponse = questionResponses.query.filter_by(studentId=userReference, questionId=questionId, problemId=problemId, assistmentId = assignmentReference, attempt=1).scalar()
                 answer = 'Attempt 1: '+ firstResponse.response + 'Attempt '+ str(responseCount) +': ' + form.content.data 
-            flash (answer, 'success')
-        #flash(message, 'success')
+            #flash (answer, 'success')
+        flash(message, 'success')
         
     return render_template('question.html', form=form, submit=submit, control=control,answer=answer)
 
