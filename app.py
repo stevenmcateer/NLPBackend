@@ -47,7 +47,7 @@ def findGroup(studentId,problemId):
     else: #Get this students group
         control = student[0].group
 
-    return int(control)
+    return int(0)
 
 class PostResponse(FlaskForm):
     content = TextAreaField('Answer', validators=[DataRequired()])
