@@ -77,7 +77,7 @@ def home():
         userReference = 14
         questionId = 10
         problemId = 21
-        assignmentReference = 2
+        assignmentReference = 4
 
     control = findGroup(userReference,problemId)
     submit = False
@@ -102,12 +102,12 @@ def home():
             db.session.add(response)
             db.session.commit()
             submit = True
-            if responseId==1:
+            if responseCount==1:
                 answer = form.content.data
             else:
                 firstResponse = questionResponses.query.filter_by(studentId=userReference, questionId=questionId, problemId=problemId, assistmentId = assignmentReference, attempt=1).scalar()
-                answer = 'Attempt 1: <br>'+ firstResponse.response + '<br>Attempt '+ str(responseCount) +': <br>' + form.content.data 
-            #flash (answer, 'success')
+                answer = 'Attempt 1: '+ firstResponse.response + '<br>Attempt '+ str(responseCount) +': <br>' + form.content.data 
+            flash (answer, 'success')
         flash(message, 'success')
         
     return render_template('question.html', form=form, submit=submit, control=control,answer=answer)
