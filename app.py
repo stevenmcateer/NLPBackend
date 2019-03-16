@@ -15,9 +15,10 @@ db = SQLAlchemy(app)
 class questionResponses(db.Model):
     responseId = db.Column(db.Integer, primary_key=True)
     studentId = db.Column(db.String(60), nullable=False)
+    assistmentId = db.Column(db.String(60), nullable=False)
     problemId = db.Column(db.String(60), nullable=False)
     questionId = db.Column(db.String(60), nullable=False)
-    #attempt = db.Column(db.Integer, nullable=False)
+    attempt = db.Column(db.Integer, nullable=False)
     response = db.Column(db.Text, nullable=False)
     grade = db.Column(db.Integer)
 
@@ -26,20 +27,21 @@ class questionResponses(db.Model):
 
 class students(db.Model):
     studentId = db.Column(db.String(60), primary_key=True, nullable=False)
-    group = db.Column(db.String(60)) #0 False in experiement, 1 True in control
+    problemId = db.Column(db.String(60), primary_key=True, nullable=False)
+    group = db.Column(db.String(1)) #0 False in experiement, 1 True in control
     
     def __repr__(self):
         return f"students('{self.studentId}', '{self.group}')"
 
-def findGroup(studentId):
+def findGroup(studentId,problemId):
     if not studentId:
         return random.choice([0, 1])
 
     control = random.choice(['0', '1'])
-    student = students.query.filter_by(studentId=studentId).all()
+    student = students.query.filter_by(studentId=studentId,problemId=problemId).all()
 
     if not student: #Save this students group if first time seen him
-        student = students(group=control, studentId=studentId)
+        student = students(group=control, studentId=studentId,problemId= problemId)
         db.session.add(student)
         db.session.commit()
     else: #Get this students group
@@ -75,30 +77,38 @@ def home():
         userReference = 14
         questionId = 10
         problemId = 21
+        assignmentReference = 2
 
-    control = findGroup(userReference)
+    control = findGroup(userReference,problemId)
     submit = False
     form = PostResponse()
 
     if form.validate_on_submit():
         if form.grade.data:
             grade = model.calculateGrade(questionId)
-            responseCount = len(questionResponses.query.filter_by(studentId=userReference, questionId=questionId).all()) + 1
+            responseCount = len(questionResponses.query.filter_by(studentId=userReference, questionId=questionId,assistmentId = assignmentReference).all()) + 1
             message = 'Your rough estimated score is a ' + str(grade) + ". This is attempt " + str(responseCount)
-            responseId = db.session.query(func.max(questionResponses.responseId)).scalar() + 1
-            response = questionResponses(responseId=responseId,studentId=userReference, problemId=problemId,questionId=questionId,response=form.content.data, grade=grade)
+            responseId = questionResponses.query.count() +1
+            response = questionResponses(responseId=responseId,studentId=userReference, problemId=problemId,questionId=questionId, assistmentId = assignmentReference,attempt = responseCount, response=form.content.data, grade=grade)
             db.session.add(response)
             db.session.commit()
-
+ 
         else:
             message = 'Your response has been saved! Please hit next problem to continue'
-            responseId = db.session.query(func.max(questionResponses.responseId)).scalar() + 1
-            response = questionResponses(responseId=responseId,studentId=userReference, problemId=problemId,questionId=questionId,response=form.content.data)
+            responseId = questionResponses.query.count() +1
+            responseCount = len(questionResponses.query.filter_by(studentId=userReference, questionId=questionId,assistmentId = assignmentReference).all()) + 1
+            response = questionResponses(responseId=responseId,studentId=userReference, problemId=problemId,questionId=questionId, assistmentId = assignmentReference,attempt = responseCount,response=form.content.data)
             db.session.add(response)
             db.session.commit()
             submit = True
-
+            if responseId==1:
+                answer = form.content.data
+            else:
+                firstResponse = questionResponses.query.filter_by(studentId=userReference, questionId=questionId, problemId=problemId, assistmentId = assignmentReference, attempt=1).scalar()
+                answer = 'Attempt 1: <br>'+ firstResponse.response + '<br>Attempt '+ str(responseCount) +': <br>' + form.content.data 
+            flash (answer, 'success')
         flash(message, 'success')
+        
     return render_template('question.html', form=form, submit=submit, control=control)
 
 
