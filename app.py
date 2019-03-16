@@ -82,8 +82,9 @@ def home():
     control = findGroup(userReference,problemId)
     submit = False
     form = PostResponse()
-
+    answer = ""
     if form.validate_on_submit():
+
         if form.grade.data:
             grade = model.calculateGrade(questionId)
             responseCount = len(questionResponses.query.filter_by(studentId=userReference, questionId=questionId,assistmentId = assignmentReference).all()) + 1
@@ -106,10 +107,10 @@ def home():
             else:
                 firstResponse = questionResponses.query.filter_by(studentId=userReference, questionId=questionId, problemId=problemId, assistmentId = assignmentReference, attempt=1).scalar()
                 answer = 'Attempt 1: <br>'+ firstResponse.response + '<br>Attempt '+ str(responseCount) +': <br>' + form.content.data 
-            flash (answer, 'success')
+            #flash (answer, 'success')
         flash(message, 'success')
         
-    return render_template('question.html', form=form, submit=submit, control=control)
+    return render_template('question.html', form=form, submit=submit, control=control,answer=answer)
 
 
 
