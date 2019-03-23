@@ -68,9 +68,18 @@ function iframeLoaded(){
 function iframeCompleted(answer) {
   //var score = document.getElementById("MyScore").value;
 
-  iframeToParent(JSONpreface + '"completed", '
-    + '"answer" : "'+ answer+'", "score" : 1.0}'
-    );
+ var returnJSON = {
+    "version": "AS.1",
+    "action": "completed",
+    "answer": answer,
+    "score": 1
+  };
+  iframeToParent(JSON.stringify(returnJSON));
+
+
+ // iframeToParent(JSONpreface + '"completed", '
+  //  + '"answer" : "'+ answer+'", "score" : 1.0}'
+ //   );
 
   window.clearTimeout(timerVar);
 }
