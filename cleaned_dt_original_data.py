@@ -314,6 +314,12 @@ for l in unique_ids_traditional:
         final_pred_prob_list.append(final_predictions_traditional)        
         filename = '.\Models\model-'+str(l)+'.sav'
         joblib.dump(dt_fit_traditional, filename)
+        filename2 = '.\Terms\model-'+str(l)+'.sav'
+        joblib.dump(term_freq_tool_traditional, filename2)
+        filename3 = '.\Counting\model-'+str(l)+'.sav'
+        joblib.dump(counting_tool_traditional,filename3)
+       # print('Predict: ', tree_predict_traditional)
+        #print('Probability: ',tree_predict_probability_traditional)
     list(final_predictions_traditional)
     final_predictions_traditional = final_predictions_traditional.drop(['problem_id_test'], axis=1)
     final_predictions_auc = final_predictions_traditional[
