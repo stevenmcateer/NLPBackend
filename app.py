@@ -111,7 +111,7 @@ def home():
             #flash (answer, 'success')
         flash(message, 'success')
         
-    return render_template('question.html', form=form, submit=submit, grade=(control and responseCount < 1), answer=answer)
+    return render_template('question.html', form=form, submit=submit, grade=(control == 0 and responseCount < 1), answer=answer)
 
 
 
