@@ -1,17 +1,17 @@
 from numpy import random
 
 
-def calculateGrade(question):
+def calculateGrade(question, response):
     grade = 4
-    question_lower = question.lower()
-
-    if 'battery' not in question_lower and 'voltage source' not in question_lower:
+    res = response.lower()
+    print(res)
+    if 'battery' not in res and 'voltage source' not in res:
         grade = grade - 1
 
-    if 'wire' not in question_lower and 'conductor' not in question_lower and 'closed circuit' not in question_lower:
+    if 'wire' not in res and 'conductor' not in res and 'closed circuit' not in res:
         grade = grade - 1
 
-    if 'resistor' not in question_lower and 'load' not in question_lower and 'light bulb' not in question_lower:
+    if 'resistor' not in res and 'load' not in res and 'light bulb' not in res:
         grade = grade - 1
 
     return grade

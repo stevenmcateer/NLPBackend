@@ -87,7 +87,7 @@ def home():
     if form.validate_on_submit():
 
         if form.grade.data:
-            grade = model.calculateGrade(questionId)
+            grade = model.calculateGrade(questionId, form.content.data)
             responseCount = len(questionResponses.query.filter_by(studentId=userReference, questionId=questionId,assistmentId = assignmentReference).all()) + 1
             message = 'Your estimated grade is ' + str(grade) + ' out of 4. You have a chance to revise before submitting.'
             responseId = questionResponses.query.count() +1
