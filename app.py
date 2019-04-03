@@ -110,7 +110,7 @@ def home():
                 firstResponseStrip = firstResponse.response.replace('\r\n','<br>')
                 LastResponseStrip = form.content.data.replace('\r\n','<br>')
 
-                answer = 'Attempt 1: <br>'+ firstResponseStrip + ' <br> Attempt '+ str(responseCount) +':  <br> '+LastResponseStrip 
+                answer = 'Attempt 1: <br>'+ firstResponseStrip + ' <br><br> Attempt '+ str(responseCount) +':  <br> '+LastResponseStrip 
                 answer = '"'+answer+'"'
             #flash (answer, 'success')
         flash(message, 'success')
