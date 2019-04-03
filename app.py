@@ -107,11 +107,11 @@ def home():
                 answer = form.content.data
             else:
                 firstResponse = questionResponses.query.filter_by(studentId=userReference, questionId=questionId, problemId=problemId, assistmentId = assignmentReference, attempt=1).scalar()
-                
+                firstGrade = firstResponse.grade
                 firstResponseStrip = firstResponse.response.replace('\r\n','<br>')
                 LastResponseStrip = form.content.data.replace('\r\n','<br>')
 
-                answer = 'Attempt 1: <br>'+ firstResponseStrip + ' <br> Attempt '+ str(responseCount) +':  <br> '+LastResponseStrip 
+                answer = 'Attempt 1: (' + str(firstGrade) +') <br>'+ firstResponseStrip + ' <br><br> Attempt '+ str(responseCount) +':  <br> '+LastResponseStrip 
                 answer = '"'+answer+'"'
             #flash (answer, 'success')
         flash(message, 'success')
