@@ -136,12 +136,13 @@ iframeLoaded()
 				</fieldset>
 				<div class="form-group" align="center">
 					
-					{%if control==False %}
+					{%if grade==True %}
 					{{ form.grade(class="btn btn-outline-info") }}
 					<br>
-					{% endif %}
+					{% else %}
 					<br>
 					{{ form.submit(class="btn btn-outline-info") }}
+                    {% endif %}
 				</div>
 			</form>
 		</div>
