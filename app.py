@@ -107,12 +107,13 @@ def home():
             else:
                 firstResponse = questionResponses.query.filter_by(studentId=userReference, questionId=questionId, problemId=problemId, assistmentId = assignmentReference, attempt=1).scalar()
                 
-                firstResponseStrip = firstResponse.response.replace('\n','<br>')
-                LastResponseStrip = form.content.data.replace('\n','<br>')
+                firstResponseStrip = firstResponse.response.replace('\r\n','<br>')
+                LastResponseStrip = form.content.data.replace('\r\n','<br>')
 
-                answer = 'Attempt 1: <br>'+ firstResponseStrip + ' <br> Attempt '+ str(responseCount) +':  <br> '+ LastResponseStrip
-            flash (answer, 'success')
-        #flash(message, 'success')
+                answer = 'Attempt 1: <br>'+ firstResponseStrip + ' <br> Attempt '+ str(responseCount) +':  <br> '+LastResponseStrip 
+                answer = '"'+answer+'"'
+            #flash (answer, 'success')
+        flash(message, 'success')
         
     return render_template('question.html', form=form, submit=submit, control=control,answer=answer)
 
