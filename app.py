@@ -33,6 +33,10 @@ class students(db.Model):
     def __repr__(self):
         return f"students('{self.studentId}', '{self.group}')"
 
+class problems(db.Model):
+    problemId = db.Column(db.String(60), primary_key=True, nullable=False)
+    experiementProblemId = db.Column(db.String(60), primary_key=True, nullable=False)
+
 def findGroup(studentId,problemId):
     if not studentId:
         return random.choice([0, 1])
@@ -84,6 +88,11 @@ def home():
     form = PostResponse()
     answer = ""
     responseCount = 0
+
+    probExp = problems.query.filter_by(problemId=problemId).first()
+    if probExp:
+        experiementProblemId = probExp.experiementProblemId
+
     if form.validate_on_submit():
 
         if form.grade.data:
