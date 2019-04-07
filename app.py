@@ -83,7 +83,7 @@ def home():
         problemId = 21
         assignmentReference = 4
 
-    control = findGroup(userReference,problemId)
+    control = findGroup(userReference,assignmentReference)
     submit = False
     form = PostResponse()
     answer = ""
