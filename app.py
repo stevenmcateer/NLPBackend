@@ -88,7 +88,7 @@ def home():
     form = PostResponse()
     answer = ""
     responseCount = 0
-
+    
     probExp = problems.query.filter_by(problemId=problemId).first()
     if probExp:
         experiementProblemId = probExp.experiementProblemId
@@ -126,7 +126,7 @@ def home():
             #flash (answer, 'success')
         flash(message, 'success')
         
-    return render_template('question.html', form=form, submit=submit, grade=(control == 0 and responseCount < 1), answer=answer)
+    return render_template('question.html', form=form, submit=submit, grade=(control == '0' and responseCount < 1), answer=answer)
 
 
 
