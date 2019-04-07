@@ -113,7 +113,8 @@ def home():
             db.session.commit()
             submit = True
             if responseCount==1:
-                answer = form.content.data
+                answer = form.content.data.replace('\r\n','<br>')
+
             else:
                 firstResponse = questionResponses.query.filter_by(studentId=userReference, questionId=questionId, problemId=problemId, assistmentId = assignmentReference, attempt=1).scalar()
                 firstGrade = firstResponse.grade
