@@ -15,6 +15,7 @@ import random
 import operator
 from spellchecker import SpellChecker
 from sklearn.model_selection import LeaveOneOut
+import datetime
 import ast
 
 
@@ -28,7 +29,7 @@ torch.manual_seed(1)
 # glove_path = "./glove.6B"
 #
 # # Data
-master_df = pd.read_csv("vectorized_data.csv", converters={0:ast.literal_eval, 1:ast.literal_eval}, )
+master_df = pd.read_csv("vectorized_data_no_spellcheck.csv", converters={1:ast.literal_eval, 2:ast.literal_eval})
 #
 # list_problems_individual_traditional = engage_ny.groupby('problem_id').count().reset_index()  ## THere are 113 problems
 #
@@ -197,7 +198,7 @@ def load_problem_vectors(problem_id):
     # print(answers)
     answers = torch.tensor(answers, dtype=torch.float)
     # print(answers.shape)
-    grades = torch.tensor(grades, dtype=torch.float)
+    grades = torch.tensor(grades, dtype=torch.long)
     return answers, grades
 
 
@@ -235,6 +236,7 @@ class Neural_Network(nn.Module):
     def backward(self, X, y, o):
         # self.o_error = torch.t(y) - o # error in output
         m = nn.Softmax(dim=1)
+        y = y.float()
         self.o_error = y - o # error in output
         self.o_delta = self.o_error * m(o) # derivative of sig to error
         self.z2_error = torch.matmul(self.o_delta, torch.t(self.W2))
@@ -419,40 +421,45 @@ def train_test_per_problem(problem_id):
     average_rmse = 0
     average_kappa = 0
     average_multi_kappa = 0
-    count = 0
+
 
     NN = Neural_Network(answers, 3, 3)
     NN.cuda()
-    # optimizer = optim.Adam(NN.parameters(), lr=0.0001)
+    optimizer = optim.Adam(NN.parameters(), lr=0.01)
+    criterion = nn.CrossEntropyLoss()
+
+    # print(NN.parameters())
+    count = 0
 
     for train_index, test_index in loo.split(answers):
         # print("TRAIN:", train_index, "TEST:", test_index)
-        count+=1
+
         X_train, X_test = answers[train_index], answers[test_index]
         y_train, y_test = labels[train_index], labels[test_index]
 
-        # NN = run_training(count, problem_id, X_train, y_train)
         # Train
-        # print("y_train\n", y_train)
+        output = NN.forward(X_train)
+        output.requires_grad = True
 
-        print ("#" + str(count) + " Loss: " + str(NN.multi_class_cross_entropy_loss(NN.forward(X_train), y_train)))
+        # loss = NN.multi_class_cross_entropy_loss(output, y_train)
+        y_train = y_train.long()
+        loss = criterion(output, torch.max(y_train, 1)[1])
+        # loss.requires_grad = True
+        optimizer.zero_grad()
+
+        loss.backward()
+        optimizer.step()
+
+        count += 1
+        print ("#" + str(count) + " Loss: " + str(loss))
+
         NN.train(X_train, y_train)
 
-        # predictions = run_test(NN, problem_id, X_test)
         # Test
-        output = NN(X_test)
-        # print(output)
-        output = output[0]
+        test_output = NN(X_test)
+        test_output = test_output[0]
 
-        # predictions = group_by_bin(output)
-
-        # print(output)
-        # optimizer.step()
-
-        # Show how well we did with test set
-        # y_test = group_by_bin(y_test.tolist()[0])
-
-        auc, rmse, kappa, multi_kappa = acc_vs_predicted(y_test, output)
+        auc, rmse, kappa, multi_kappa = acc_vs_predicted(y_test, test_output)
         auc_each_loop.append(auc)
         rmse_each_loop.append(rmse)
         kappa_each_loop.append(kappa)
@@ -512,6 +519,15 @@ def train_test_all_problems():
     print("Final Kappa:", final_kappa)
     print("Final Multi Kappa:", final_multi_kappa)
 
+    now = datetime.datetime.now()
+    f = open("Results/eval-" + str(now.strftime("%Y-%m-%d")) + str(now.microsecond) + ".txt", "w+")
+    f.write("Final AUC: " + str(final_auc))
+    f.write("Final RMSE: " + str(final_rmse))
+    f.write("Final Kappa: " + str(final_kappa))
+    f.write("Final  Multi Kappa:" + str(final_multi_kappa))
+    f.close()
+
+
     # 7/25 (changed to softmax)
     # Final AUC: 0.7665351055857251
     # Final RMSE: 0.23624986082472338
@@ -523,6 +539,12 @@ def train_test_all_problems():
     # Final RMSE: 0.2505419710498344
     # Final Kappa: 0.4971732283353235
     # Final Multi Kappa: 1.0
+
+#     7/30 new data
+#     Final AUC: 0.6375228851050786
+#     Final RMSE: 0.3338900548005477
+#     Final Kappa: 0.30264203107873244
+#     Final Multi Kappa: 1.0
 
 # Problem ids
 # # 1487480 - 43 answers

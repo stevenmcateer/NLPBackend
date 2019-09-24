@@ -24,7 +24,7 @@ def auc(actual, predicted, average_over_labels=True, partition=1024.):
         #     print('AUC Warning - Number of distinct values in label set {} is greater than 2, '
         #           'using median split of distinct values...'.format(i))
         if len(val) == 1:
-            # print('AUC Warning - There is only 1 distinct value in label set {}, unable to calculate AUC'.format(i))
+            print('AUC Warning - There is only 1 distinct value in label set {}, unable to calculate AUC'.format(i))
             label_auc.append(np.nan)
             continue
 

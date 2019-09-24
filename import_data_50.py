@@ -2,8 +2,6 @@ import matplotlib
 import pandas as pd
 pd.set_option('display.max_columns', 10)
 from sklearn.preprocessing import label_binarize
-import nltk
-from nltk.corpus import stopwords
 import time
 import torch
 import numpy as np
@@ -22,8 +20,7 @@ start_time = time.time()
 
 
 # stanfordnlp.download('en')   # This downloads the English models for the neural pipeline
-nltk.download("stopwords")
-nlp = stanfordnlp.Pipeline(use_gpu=False)
+
 
 def remake_glove_files():
     glove_path = "./glove.6B"
@@ -32,9 +29,9 @@ def remake_glove_files():
     idx = 0
     word2idx = {}
     glove = {}
-    vectors = bcolz.carray(np.zeros(1), rootdir=f'{glove_path}/6B.100.dat', mode='w')
+    vectors = bcolz.carray(np.zeros(1), rootdir=f'{glove_path}/6B.50.dat', mode='w')
 
-    with open(f'{glove_path}/glove.6B.100d.txt', 'rb') as f:
+    with open(f'{glove_path}/glove.6B.50d.txt', 'rb') as f:
         for l in f:
             line = l.decode().split()
             word = line[0]
@@ -45,20 +42,20 @@ def remake_glove_files():
             vectors.append(vect)
 
 
-    vectors = bcolz.carray(vectors[1:].reshape((-1, 100)), rootdir=f'{glove_path}/6B.100.dat', mode='w')
+    vectors = bcolz.carray(vectors[1:].reshape((-1, 100)), rootdir=f'{glove_path}/6B.50d.dat', mode='w')
     vectors.flush()
 
     # Save everything
-    with open("./glove.6B/6B.100_words.pkl", "wb") as f:
+    with open("./glove.6B/6B.50_words.pkl", "wb") as f:
         pickle.dump(words, f)
 
-    with open("./glove.6B/6B.100_idx.pkl", "wb") as g:
+    with open("./glove.6B/6B.50_idx.pkl", "wb") as g:
         pickle.dump(word2idx, g)
 
     # Dictionary to get vectors from... glove["the"] = vector(....)
     glove = {w: vectors[word2idx[w]] for w in words}
 
-    with open("./glove.6B/6B.100_glove.pkl", "wb") as g:
+    with open("./glove.6B/6B.50_glove.pkl", "wb") as g:
         pickle.dump(glove, g)
 
     return words, word2idx, glove
@@ -67,17 +64,17 @@ def remake_glove_files():
 
 def open_saved_glove_files():
     # Open saved stuff
-    vectors = bcolz.open('./glove.6B/6B.100.dat')[:]
+    vectors = bcolz.open('./glove.6B/6B.50.dat')[:]
     try:
-        with open('./glove.6B/6B.100_words.pkl', 'rb') as f:
+        with open('./glove.6B/6B.50_words.pkl', 'rb') as f:
             words_data = pickle.load(f)
             # print(words_data)
 
-        with open('./glove.6B/6B.100_idx.pkl', 'rb') as f:
+        with open('./glove.6B/6B.50_idx.pkl', 'rb') as f:
             idx_data = pickle.load(f)
             # print(idx_data)
 
-        with open('./glove.6B/6B.100_glove.pkl', 'rb') as f:
+        with open('./glove.6B/6B.50_glove.pkl', 'rb') as f:
             glove = pickle.load(f)
 
 
@@ -191,8 +188,8 @@ def load_csv(dataset):
 def preprocessing(dataset_name):
 
 
-    if path.exists("vectorized_" + dataset_name + "_stanford_100d.csv"):
-        master_df = pd.read_csv("vectorized_" + dataset_name + "_stanford_100d.csv", converters={2: ast.literal_eval, 3: ast.literal_eval})
+    if path.exists("vectorized_" + dataset_name + "_folds_tokenize.csv"):
+        master_df = pd.read_csv("vectorized_" + dataset_name + "_folds_tokenize.csv", converters={2: ast.literal_eval, 3: ast.literal_eval})
         all_problems = master_df.groupby('problem_id').count().reset_index()
         # Load saved pickled files
         words_data, word2idx, glove = open_saved_glove_files()
@@ -200,7 +197,7 @@ def preprocessing(dataset_name):
         weights_matrix, dataset_word2idx = create_weights_matrix(vocab, glove)
         return master_df, all_problems, vocab, weights_matrix
     else:
-
+        nlp = stanfordnlp.Pipeline()
         fully_connected = load_csv(dataset_name)
         cleaned_columns_connected = fully_connected[["problem_log_id", "problem_id", "cleaned_answer_text", "grade", "folds"]]
         # print(cleaned_columns_connected)
@@ -241,7 +238,7 @@ def preprocessing(dataset_name):
 
             print("Row: " + str(count) +"/" + str(len(cleaned_columns_connected)) + ": " + str(pid))
             # Convert answer to vector
-            cleaned_answer = clean_answer(answer)
+            cleaned_answer = clean_answer(nlp, answer)
             idx_answer = convert_to_idx_vector(dataset_word2idx, cleaned_answer, max_response_len)
             # Convert grade to one hot
             encoded_grade = convert_grade(grade)
@@ -249,7 +246,7 @@ def preprocessing(dataset_name):
             cleaned_columns_connected.at[index, 'grade'] = str(encoded_grade)
 
             master_df = master_df.append({'problem_log_id': problem_log_id, 'problem_id': pid, 'answer':str(idx_answer), 'grade':str(encoded_grade), 'folds': folds},  ignore_index=True)
-        print(master_df)
+            print(master_df)
 
         # Save to csv
         master_df.to_csv("vectorized_" + dataset_name + "_stanford_100d.csv", index=False)
@@ -307,9 +304,8 @@ def convert_grade(grade):
         return [0, 0, 0, 0, 1]
     return [0, 0, 0, 0, 0]
 
-def clean_answer(sentence):
+def clean_answer(nlp, sentence):
     # use stanford tokenizer
-    stopWords = set(stopwords.words('english'))
     print("Sentence is:" + "'" + sentence + "'")
     sentence = sentence.lower()
 
@@ -331,14 +327,10 @@ def clean_answer(sentence):
         # print("length is greater than 0")
         doc = nlp(sentence)
         for i, sent in enumerate(doc.sentences):
-            for word in sent.words:
-                if word.text not in stopWords:
-                    # print(word, " not in", stopWords)
-                    sentence_words.append(word.text)
-
-            # for word in sentence_trimmed:
-            #     sentence_words.append(word.text)
-        print("New sentence is", sentence_words)
+            sentence_trimmed = sent.words[:, 20]
+            for word in sentence_trimmed:
+                sentence_words.append(word.text)
+        print(sentence_words)
     else:
         # print("Length is 0")
         return []
