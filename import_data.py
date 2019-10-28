@@ -82,7 +82,7 @@ def open_saved_glove_files():
     return words_data, idx_data, glove
 
 def get_dataset_vocab(master_df, dataset):
-    if dataset == "anthony":
+    if dataset == "glove1":
         try:
             with open('./glove.6B/vocab_list_pad.pkl', 'rb') as f:
                 vocab_list = pickle.load(f)
@@ -224,7 +224,7 @@ def load_csv(dataset):
         dummy_predictors.index.values
         return engage_ny #, dummy_predictors
 
-    elif dataset == "anthony":
+    elif dataset == "glove1":
         # Open the problems and answers
         open_responses = pd.read_csv('full_connected_responses.csv', encoding='latin1')
         return open_responses
@@ -269,14 +269,14 @@ def preprocessing(dataset_name):
 
         fully_connected = load_csv(dataset_name)
 
-        cleaned_columns_connected = fully_connected[["grader_teacher_id", "problem_log_id", "problem_id", "parsed_cleaned_answers2", "grade","folds"]]
+        cleaned_columns_connected = fully_connected[["grader_teacher_id", "problem_log_id", "problem_id", "cleaned_answer_text", "grade","folds"]]
         # cleaned_columns_connected = fully_connected[
         #     ["problem_id", "parsed_cleaned_answers", "grade", "folds"]]
 
-        # for index, row in cleaned_columns_connected.iterrows():
-        #     if pd.isnull(row['parsed_cleaned_answers2']):
-        #         print("Removing null answer")
-        #         cleaned_columns_connected = cleaned_columns_connected.drop(index=index)
+        for index, row in cleaned_columns_connected.iterrows():
+            if pd.isnull(row['cleaned_answer_text']):
+                print("Removing null answer")
+                cleaned_columns_connected = cleaned_columns_connected.drop(index=index)
 
 
         all_problems = cleaned_columns_connected.groupby('problem_id').count().reset_index()
@@ -302,7 +302,7 @@ def preprocessing(dataset_name):
             count+=1
             # cleaned_columns_connected.loc[:, 'grade'] = cleaned_columns_connected['grade'].astype(str)
             pid = row["problem_id"]
-            answer = row["parsed_cleaned_answers2"]
+            answer = row["cleaned_answer_text"]
             problem_log_id = row["problem_log_id"]
             folds = row["folds"]
             grader_teacher_id = row["grader_teacher_id"]
@@ -310,20 +310,18 @@ def preprocessing(dataset_name):
 
             print("Row: " + str(count) +"/" + str(len(cleaned_columns_connected)) + ": " + str(pid))
             # Convert answer to vector
-            # cleaned_answer = clean_answer(answer)
+            cleaned_answer = clean_answer(answer)
             idx_answer = convert_to_idx_vector(dataset_word2idx, answer)
+
             # Convert grade to one hot
             encoded_grade = convert_grade(grade)
-            # cleaned_columns_connected.at[index, 'cleaned_answer_text'] = str(idx_answer)
-            # cleaned_columns_connected.at[index, 'grade'] = str(encoded_grade)
 
-
-            master_df = master_df.append({'problem_log_id': problem_log_id, 'problem_id': pid, 'answer':str(idx_answer), 'grade':str(encoded_grade), 'folds': folds, "grader_teacher_id": grader_teacher_id},  ignore_index=True)
+            master_df = master_df.append({'problem_log_id': problem_log_id, 'problem_id': pid, 'answer':str(cleaned_answer), 'idx_answer':str(idx_answer), 'grade':str(grade), 'encoded_grade':str(encoded_grade), 'folds': folds, "grader_teacher_id": grader_teacher_id},  ignore_index=True)
             # master_df = master_df.append({'problem_id': pid, 'answer':str(idx_answer), 'grade':str(encoded_grade), 'folds': folds},  ignore_index=True)
         # print(master_df)
 
         # Save to csv
-        master_df.to_csv("vectorized_" + dataset_name + ".csv", index=False)
+        master_df.to_csv("tokenized_" + dataset_name + ".csv", index=False)
 
 
         return master_df, all_problems, vocab, weights_matrix
@@ -337,7 +335,7 @@ def load_X_y(problem_id, dataset, dataset_name, glove):
 
     # Try to clean up answers
     count = 0
-    if dataset_name=="anthony":
+    if dataset_name=="glove1":
         for answer in problem_object.cleaned_answer_text:
             count+=1
             print("Converting answer:", count, "/", len(problem_object.cleaned_answer_text))
@@ -421,5 +419,5 @@ def convert_to_idx_vector(dataset_word2idx, sentence):
 if __name__ == '__main__':
     # dataset_name = sys.argv[1]
 
-    preprocessing(dataset_name="anthony")
+    preprocessing(dataset_name="glove1")
 

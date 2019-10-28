@@ -437,14 +437,6 @@ def train_test_all_problems(master_df, all_problems, dataset_name):
 # # 1487480 - 43 answers
 if __name__ == '__main__':
     # problem_id = int(sys.argv[1])
-    # weights_matrix, words_list = get_vocabulary(problem_id)
-    # train_test_all_problems()
-    # train_test_per_problem(1487480)
-    # sample = torch.tensor([[-2.2767, 4.1321, 2.7677, -5.0111, 2.9111],
-    #                       [6.2224, 1.4400, -0.4112, 2.4321, 0.3112]])
-    # print(sample)
-    # convert_to_z_score(sample)
 
     calculate_grade(41099, "There must be 2 because I said so.")
-    # clean_answer("It has 2 lines that are parrellel to eachother and perpendicular to the planes.")
 

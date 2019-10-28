@@ -5,7 +5,7 @@ import torch_lstm_folds
 
 
 if __name__ == "__main__":
-    dataset_name = "glove3"
+    dataset_name = "glove1"
 
     master_df, all_problems, vocab_list, weights_matrix = import_data.preprocessing(dataset_name)
 
