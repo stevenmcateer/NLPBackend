@@ -11,18 +11,13 @@ import pandas as pd
 import bcolz
 import pickle
 import stanfordnlp
-import re
-import sys
-from spellchecker import SpellChecker
-import os.path
 from os import path
 import ast
-import math
 start_time = time.time()
 
-
+#
 # stanfordnlp.download('en')   # This downloads the English models for the neural pipeline
-nltk.download("stopwords")
+# nltk.download("stopwords")
 nlp = stanfordnlp.Pipeline(use_gpu=False)
 
 def remake_glove_files():
@@ -86,47 +81,93 @@ def open_saved_glove_files():
 
     return words_data, idx_data, glove
 
-def get_dataset_vocab(master_df):
+def get_dataset_vocab(master_df, dataset):
+    if dataset == "anthony":
+        try:
+            with open('./glove.6B/vocab_list_pad.pkl', 'rb') as f:
+                vocab_list = pickle.load(f)
+                return vocab_list
+        except FileNotFoundError:
+            vocab_list = []
+            vocab_list.append("<pad>")
+            for answer in master_df.cleaned_answer_text:
+
+                for word in clean_answer(answer):
+                    if word not in vocab_list:
+                        vocab_list.append(word)
+
+                        # print(vocab_list)
+            with open("./glove.6B/vocab_list_pad.pkl", "wb") as f:
+                pickle.dump(vocab_list, f)
+    elif dataset == "glove2":
+        try:
+            with open('./glove.6B/vocab_list_glove2.pkl', 'rb') as f:
+                vocab_list = pickle.load(f)
+                return vocab_list
+        except FileNotFoundError:
+            vocab_list = []
+            vocab_list.append("<pad>")
+            count = 1
+            for answer in master_df.parsed_cleaned_answers2:
+                count+=1
+                print("Row", count, "of", len(master_df.parsed_cleaned_answers2))
+                print(answer)
+                for word in answer:
+                    print("word", word)
+                    if word not in vocab_list:
+                        vocab_list.append(word)
+
+                        # print(vocab_list)
+            with open("./glove.6B/vocab_list_glove2.pkl", "wb") as f:
+                pickle.dump(vocab_list, f)
+    elif dataset == "glove3":
+        try:
+            with open('./glove.6B/vocab_list_glove3.pkl', 'rb') as f:
+                vocab_list = pickle.load(f)
+                return vocab_list
+        except FileNotFoundError:
+            vocab_list = []
+            vocab_list.append("<pad>")
+            count = 1
+            for answer in master_df.parsed_cleaned_answers2:
+                count += 1
+                print("Row", count, "of", len(master_df.parsed_cleaned_answers2))
+                print(answer)
+                for word in answer:
+                    print("word", word)
+                    if word not in vocab_list:
+                        vocab_list.append(word)
+
+                        # print(vocab_list)
+            with open("./glove.6B/vocab_list_glove3.pkl", "wb") as f:
+                pickle.dump(vocab_list, f)
+
+    print("length of final vocab list", len(vocab_list))
+    return vocab_list
+
+
+
+def create_weights_matrix(dataset_vocab_list, glove, dataset_name):
     try:
-        with open('./glove.6B/vocab_list.pkl', 'rb') as f:
-            vocab_list = pickle.load(f)
-            return vocab_list
-    except FileNotFoundError:
-        vocab_list = []
-        for answer in master_df.cleaned_answer_text:
-
-            for word in clean_answer(answer):
-                if word not in vocab_list:
-                    vocab_list.append(word)
-
-                    # print(vocab_list)
-        with open("./glove.6B/vocab_list.pkl", "wb") as f:
-            pickle.dump(vocab_list, f)
-
-        print("final", vocab_list)
-        return vocab_list
-
-
-
-def create_weights_matrix(dataset_vocab_list, glove):
-
-    try:
-        with open('./glove.6B/weights_matrix.pkl', 'rb') as f:
+        with open('./glove.6B/weights_matrix_100d_' + dataset_name + '.pkl', 'rb') as f:
             weights_matrix = pickle.load(f)
             weights_matrix = torch.tensor(weights_matrix, dtype=torch.float)
 
-        with open('./glove.6B/dataset_w2idx.pkl', 'rb') as f:
+        with open('./glove.6B/dataset_w2idx_100d_' + dataset_name + '.pkl', 'rb') as f:
             dataset_word2idx = pickle.load(f)
 
         return weights_matrix, dataset_word2idx
     except FileNotFoundError:
         matrix_len = len(dataset_vocab_list)
-        # dim is 50 because of glove.6B50
-        weights_matrix = np.zeros((matrix_len, 50))
+        # dim is 100 because of glove.6B100
+        weights_matrix = np.zeros((matrix_len, 100))
         dataset_word2idx = {}
         words_found = 0
 
         for i, word in enumerate(dataset_vocab_list):
+            # if the pad vocab word
+            if i == 0:
+                print("pad word at index 0 is", word)
             dataset_word2idx[word] = i
 
             print("Word", i, "of", matrix_len)
@@ -135,13 +176,14 @@ def create_weights_matrix(dataset_vocab_list, glove):
                 words_found += 1
                 print("Found words:", words_found)
             except KeyError:
-                weights_matrix[i] = np.random.normal(scale=0.6, size=(50,))
+                weights_matrix[i] = np.random.normal(scale=0.6, size=(100,))
+            print("index", i, "has vector", weights_matrix[i])
 
-        with open("./glove.6B/weights_matrix.pkl", "wb") as f:
+        with open("./glove.6B/weights_matrix_100d_" + dataset_name +".pkl", "wb") as f:
             pickle.dump(weights_matrix, f)
 
 
-        with open("./glove.6B/dataset_w2idx.pkl", "wb") as f:
+        with open("./glove.6B/dataset_w2idx_100d_" + dataset_name + ".pkl", "wb") as f:
             pickle.dump(dataset_word2idx, f)
     return weights_matrix, dataset_word2idx
 
@@ -186,38 +228,70 @@ def load_csv(dataset):
         # Open the problems and answers
         open_responses = pd.read_csv('full_connected_responses.csv', encoding='latin1')
         return open_responses
+    elif dataset == "glove2":
+        # Open the problems and answers
+        open_responses = pd.read_csv('tokenized_glove2_lower.csv', converters={6: ast.literal_eval}, encoding='latin1')
+        return open_responses
+    elif dataset == "glove3":
+        # Open the problems and answers
+        open_responses = pd.read_csv('tokenized_glove3.csv', converters={6: ast.literal_eval}, encoding='latin1')
+        return open_responses
 
 
 def preprocessing(dataset_name):
+    if path.exists("vectorized_" + dataset_name + ".csv"):
+        master_df = pd.read_csv("vectorized_" + dataset_name + ".csv", converters={1: ast.literal_eval, 2: ast.literal_eval})
+        # master_df = master_df.astype({'answer': 'list', 'grade': 'list'}, copy=True)
 
-
-    if path.exists("vectorized_" + dataset_name + "_stanford_100d.csv"):
-        master_df = pd.read_csv("vectorized_" + dataset_name + "_stanford_100d.csv", converters={2: ast.literal_eval, 3: ast.literal_eval})
+        # if 'grader_teacher_id' not in master_df.columns:
+        #     fully_connected = load_csv(dataset_name)
+        #     cleaned_columns_connected = fully_connected[
+        #         ["grader_teacher_id", "problem_log_id", "problem_id", "cleaned_answer_text", "grade", "folds"]]
+        #     # Add the grader teach column to vectorized dataset
+        #     master_df['grader_teacher_id'] = cleaned_columns_connected['grader_teacher_id'].astype(int)
+        #
+        #
+        #     # for index, row in cleaned_columns_connected.iterrows():
+        #     #     if pd.isnull(row['cleaned_answer_text']):
+        #     #         master_df = master_df.drop(index=index)
+        #
+        #     # master_df.reset_index(inplace=True)
+        #     all_problems = master_df.groupby('problem_id').count().reset_index()
+        #     master_df.to_csv("vectorized_anthony_raw_length_pad_idx.csv_teacher.csv")
+        print(master_df)
         all_problems = master_df.groupby('problem_id').count().reset_index()
         # Load saved pickled files
         words_data, word2idx, glove = open_saved_glove_files()
-        vocab = get_dataset_vocab(master_df)
-        weights_matrix, dataset_word2idx = create_weights_matrix(vocab, glove)
+        vocab = get_dataset_vocab(master_df, dataset_name)
+        weights_matrix, dataset_word2idx = create_weights_matrix(vocab, glove, dataset_name)
         return master_df, all_problems, vocab, weights_matrix
     else:
 
         fully_connected = load_csv(dataset_name)
-        cleaned_columns_connected = fully_connected[["problem_log_id", "problem_id", "cleaned_answer_text", "grade", "folds"]]
-        # print(cleaned_columns_connected)
+
+        cleaned_columns_connected = fully_connected[["grader_teacher_id", "problem_log_id", "problem_id", "parsed_cleaned_answers2", "grade","folds"]]
+        # cleaned_columns_connected = fully_connected[
+        #     ["problem_id", "parsed_cleaned_answers", "grade", "folds"]]
+
+        # for index, row in cleaned_columns_connected.iterrows():
+        #     if pd.isnull(row['parsed_cleaned_answers2']):
+        #         print("Removing null answer")
+        #         cleaned_columns_connected = cleaned_columns_connected.drop(index=index)
 
 
         all_problems = cleaned_columns_connected.groupby('problem_id').count().reset_index()
 
         # Load saved
-        words_data, word2idx, glove = remake_glove_files()
+        words_data, word2idx, glove = open_saved_glove_files()
         # # Remake saved pickled files
         # words_data, word2idx, glove = remake_glove_files()
-        vocab = get_dataset_vocab(cleaned_columns_connected)
-        weights_matrix, dataset_word2idx = create_weights_matrix(vocab, glove)
+        vocab = get_dataset_vocab(cleaned_columns_connected, dataset_name)
+        weights_matrix, dataset_word2idx = create_weights_matrix(vocab, glove, dataset_name)
 
+        # master_df = pd.DataFrame(columns=["grader_teacher_id", "problem_log_id", "problem_id", "answer", "grade", "folds"])
+        master_df = pd.DataFrame(
+            columns=["problem_id", "answer", "grade", "folds"])
 
-
-        master_df = pd.DataFrame(columns=["problem_log_id", "problem_id", "answer", "grade", "folds"])
 
         # test_prob = [36600, 36601]
 
@@ -226,50 +300,34 @@ def preprocessing(dataset_name):
         # index = 23177
         # row = cleaned_columns_connected.iloc[23177]
             count+=1
-            cleaned_columns_connected.loc[:, 'grade'] = cleaned_columns_connected['grade'].astype(str)
+            # cleaned_columns_connected.loc[:, 'grade'] = cleaned_columns_connected['grade'].astype(str)
             pid = row["problem_id"]
-            answer = row["cleaned_answer_text"]
+            answer = row["parsed_cleaned_answers2"]
             problem_log_id = row["problem_log_id"]
             folds = row["folds"]
-            if pd.isnull(answer):
-                answer = ""
+            grader_teacher_id = row["grader_teacher_id"]
             grade = row["grade"]
-            # Get the max answer length
-            # max_response_len = get_max_response_length(pid, cleaned_columns_connected)
-            max_response_len = 20
-            print(max_response_len)
 
             print("Row: " + str(count) +"/" + str(len(cleaned_columns_connected)) + ": " + str(pid))
             # Convert answer to vector
-            cleaned_answer = clean_answer(answer)
-            idx_answer = convert_to_idx_vector(dataset_word2idx, cleaned_answer, max_response_len)
+            # cleaned_answer = clean_answer(answer)
+            idx_answer = convert_to_idx_vector(dataset_word2idx, answer)
             # Convert grade to one hot
             encoded_grade = convert_grade(grade)
-            cleaned_columns_connected.at[index, 'cleaned_answer_text'] = str(idx_answer)
-            cleaned_columns_connected.at[index, 'grade'] = str(encoded_grade)
+            # cleaned_columns_connected.at[index, 'cleaned_answer_text'] = str(idx_answer)
+            # cleaned_columns_connected.at[index, 'grade'] = str(encoded_grade)
 
-            master_df = master_df.append({'problem_log_id': problem_log_id, 'problem_id': pid, 'answer':str(idx_answer), 'grade':str(encoded_grade), 'folds': folds},  ignore_index=True)
-        print(master_df)
+
+            master_df = master_df.append({'problem_log_id': problem_log_id, 'problem_id': pid, 'answer':str(idx_answer), 'grade':str(encoded_grade), 'folds': folds, "grader_teacher_id": grader_teacher_id},  ignore_index=True)
+            # master_df = master_df.append({'problem_id': pid, 'answer':str(idx_answer), 'grade':str(encoded_grade), 'folds': folds},  ignore_index=True)
+        # print(master_df)
 
         # Save to csv
-        master_df.to_csv("vectorized_" + dataset_name + "_stanford_100d.csv", index=False)
+        master_df.to_csv("vectorized_" + dataset_name + ".csv", index=False)
 
 
-        return master_df, all_problems, vocab, weights_matrix, dataset_word2idx
+        return master_df, all_problems, vocab, weights_matrix
 
-def get_max_response_length(pid, df):
-    problem_object = df.loc[df['problem_id'] == pid]
-    # Find max answer length for matrix
-    max_len = 0
-    for response in problem_object.cleaned_answer_text:
-        num_words = len(clean_answer(response))
-
-        # print("Is", num_words, "greater than", max_len)
-        if num_words > max_len:
-            # print("yes, new max is", num_words)
-            max_len = num_words
-
-    return max_len
 
 def load_X_y(problem_id, dataset, dataset_name, glove):
     problem_object = dataset.loc[dataset['problem_id'] == problem_id]
@@ -310,31 +368,21 @@ def convert_grade(grade):
 def clean_answer(sentence):
     # use stanford tokenizer
     stopWords = set(stopwords.words('english'))
-    print("Sentence is:" + "'" + sentence + "'")
-    sentence = sentence.lower()
+    print("Sentence is:" + "'" + str(sentence) + "'")
+    sentence = str(sentence).lower()
 
-    # CORRECT_SENTENCE_LENGTH
-    # AMBIGUOUS_SENTENCE_LENGTH
-
-    # for c in sentence:
-    #     print(ord(c))
-
-    # using join() + generator to
     # remove bad_chars
     sentence = sentence.replace('\n', '').replace('\r', '').replace('\r\n', '')
-    # print(sentence)
-    #
-    # for c in sentence:
-    #     print(ord(c))
+
     sentence_words = []
     if len(sentence) > 0:
         # print("length is greater than 0")
         doc = nlp(sentence)
         for i, sent in enumerate(doc.sentences):
             for word in sent.words:
-                if word.text not in stopWords:
+                # if word.text not in stopWords:
                     # print(word, " not in", stopWords)
-                    sentence_words.append(word.text)
+                sentence_words.append(word.text)
 
             # for word in sentence_trimmed:
             #     sentence_words.append(word.text)
@@ -342,44 +390,15 @@ def clean_answer(sentence):
     else:
         # print("Length is 0")
         return []
-
-    # sentence = str(sentence)
-    # # initializing bad_chars_list
-    # bad_chars = [';', ':', '!', '\n', '\r']
-    #
-    # # using join() + generator to
-    # # remove bad_chars
-    # cleaned = sentence
-    # for i in bad_chars:
-    #     cleaned = sentence.replace(i, '')
-    #
-    # sentence_words = list(re.sub("[^\w]", " ", str(cleaned)).split())
-    # print(sentence_words)
-
     return sentence_words
 
-    # # find those words that may be misspelled
-    # misspelled = spell.unknown(sentence_words)
-    # new_sentence = sentence_words
-    # count = 0
-    # for word in misspelled:
-    #     print(count)
-    #     count+=1
-    #     if count > 10:
-    #         return new_sentence
-    #     else:
-    #         # Get the one `most likely` answer
-    #         print("Replacing", word, "with", spell.correction(word))
-    #         new_sentence = [w.replace(word,spell.correction(word)) for w in sentence_words]
-    #         print(new_sentence)
-    # return new_sentence
 
 
 
-def convert_to_idx_vector(dataset_word2idx, sentence, max_len):
+def convert_to_idx_vector(dataset_word2idx, sentence):
     answer = []
     # print(len(dataset_word2idx))
-
+    count = 0
     for word in sentence:
         # try:
         # print(dataset_word2idx)
@@ -387,13 +406,12 @@ def convert_to_idx_vector(dataset_word2idx, sentence, max_len):
         try:
             index = dataset_word2idx[word]
         except KeyError:
+            count += 1
             index = 0
 
         answer.append(index)
 
-    # Pad with zeroes if needed
-    if len(answer) < max_len:
-        answer.extend([0] * (max_len - len(answer)))
+    print(count, "words not found in dataset2idx")
 
     # Return vectorized answer
     return answer
