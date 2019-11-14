@@ -62,14 +62,21 @@ for i in np.unique(no_missing_text.folds.values):
     print(i)
     test_set = no_missing_text.loc[no_missing_text.folds == i]
     training_set = no_missing_text.loc[no_missing_text.folds != i]
+
+
+
+
     # training_set = no_missing_text.loc[~(no_missing_text.folds == i)]#does the same thing
 
     np.unique(test_set.folds)
     np.unique(training_set.folds)
 
     X_train = training_set.cleaned_answer_text.values
+    print("X_train\n", X_train)
+    print(len(X_train))
     X_test = test_set.cleaned_answer_text.values
     y_train = training_set[['grade_0', 'grade_1', 'grade_2', 'grade_3', 'grade_4']].values
+    print("y_train\n", y_train)
     y_test = test_set[['grade_0', 'grade_1', 'grade_2', 'grade_3', 'grade_4']].values
 
     ##########transform the training data to the counting vector (matches the counts to our full corpus)
@@ -87,6 +94,7 @@ for i in np.unique(no_missing_text.folds.values):
     random_forest = rf_model.fit(term_freq_words_transform_training_traditional, pd.DataFrame(y_train))
 
     rf_predict_traditional = random_forest.predict_proba(term_freq_words_transform_training_traditional_test)
+    print(rf_predict_traditional)
 
     grade_0 = pd.DataFrame(rf_predict_traditional[0])
     # grade_0 = pd.DataFrame(rf_predict_traditional_ovr[0])
@@ -156,4 +164,4 @@ average_rmse_folds = np.mean(all_rmse) ###
 print('10-fold RMSE : ,', average_rmse_folds)
 
 
-random_forest_predictions.to_csv('random_forest_predictions_fold_STEVE_example.csv', index = False)
+random_forest_predictions.to_csv('rf_predictions_fold.csv', index = False)

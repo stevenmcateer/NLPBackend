@@ -27,7 +27,7 @@ torch.manual_seed(1)
 
 
 # Device configuration
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cpu' if torch.cuda.is_available() else 'cpu')
 #device = torch.device('cpu')
 
 # Hyper-parameters
@@ -43,36 +43,36 @@ embedding_length = 100
 
 
 
-def load_problem_vectors(problem_id, master_df):
+def load_fold_vectors(master_df):
     # # Data
     # master_df = pd.read_csv("vectorized_" + dataset_name + "_no_spellcheck.csv", converters={1: ast.literal_eval, 2: ast.literal_eval})
 
-    problem_object = master_df.loc[master_df['problem_id'] == problem_id]
+    # fold_object = master_df.loc[master_df['folds'] == fold_num]
 
     answers = []
 
-    for ans in list(problem_object["idx_answer"]):
-        print(ans)
+    for ans in list(master_df["idx_answer"]):
+        # print(ans)
 
         if ans == []:
             answers.append(torch.LongTensor([0]).to(device))
         else:
-            if len(ans) > 1000:
+            if len(ans) > 50:
                 print("ans is", len(ans))
-                answers.append(torch.LongTensor(ans[:1000]).to(device))
+                answers.append(torch.LongTensor(ans[:50]).to(device))
             else:
                 answers.append(torch.LongTensor(ans).to(device))
 
     # answers = list(problem_object["answer"])
-    grades = list(problem_object["encoded_grade"])
-    folds = list(problem_object["folds"])
-    problem_log_ids = list(problem_object["problem_log_id"])
-    grader_teacher_ids = list(problem_object["grader_teacher_id"])
+    grades = list(master_df["encoded_grade"])
+    all_folds = list(master_df["folds"])
+    problem_log_ids = list(master_df["problem_log_id"])
+    grader_teacher_ids = list(master_df["grader_teacher_id"])
 
     # return answers as list of vectors, and grades
     # answers = torch.tensor(answers, dtype=torch.long)#, requires_grad=True)
     # grades = torch.tensor(grades, dtype=torch.long)
-    return answers, grades, problem_log_ids, grader_teacher_ids, folds
+    return answers, grades, problem_log_ids, grader_teacher_ids, all_folds
 
 
 class LSTMClassifier(nn.Module):
@@ -159,12 +159,12 @@ def calculate_grade(question, response):
 
 
 # Load trained model
-def load_saved_model(problem_id, answers):
-    return torch.load("LSTM/trained_lstm_" + str(problem_id) + ".pt")
+def load_saved_model(fold_num):
+    return torch.load("LSTM/trained_lstm_" + str(fold_num) + ".pt")
 
 # Save model
-def save_weights(model, problem_id):
-    torch.save(model, "LSTM/trained_lstm_" + str(problem_id) + ".pt")
+def save_weights(model, fold_num):
+    torch.save(model, "LSTM/trained_lstm_" + str(fold_num) + ".pt")
 
 
 
@@ -189,7 +189,7 @@ def group_by_bin(output):
         return predicted_grades
 
 def acc_vs_predicted(actual_grades, predicted_grades):
-    actual_grades = actual_grades.tolist()
+    # actual_grades = actual_grades.tolist()
     # print(predicted_grades)
     rounded = group_by_bin(predicted_grades)
     # predicted_grades = predicted_grades.tolist()
@@ -263,15 +263,11 @@ def convert_to_z_score(output, col_means, col_stds):
 
 
 
-def train_test_per_problem(problem_id, prob_number, all_prob_len, dataset_name, master_df, vocab_list, weights_matrix):
-    answers, labels, problem_log_ids, grader_teacher_ids, folds = load_problem_vectors(problem_id, master_df)
+def train_test_per_fold(master_df, dataset_name, vocab_list, weights_matrix):
+    answers, labels, problem_log_ids, grader_teacher_ids, list_folds = load_fold_vectors(master_df)
 
-    all_fold_numbers = []
-
-    for fold in folds:
-        if fold not in all_fold_numbers:
-            all_fold_numbers.append(fold)
-
+    all_fold_numbers = set(list_folds)
+    print(list_folds)
     print("All fold numbers:", all_fold_numbers)
     final_predictions = []
     test_order = []
@@ -305,49 +301,25 @@ def train_test_per_problem(problem_id, prob_number, all_prob_len, dataset_name, 
     run = 0
     for f in range(1, 11):
         test_fold = True
-        # if there are only 1 folds in the set
-        if len(all_fold_numbers) == 1:
-            test_fold = False
-            for i in range(len(answers)):
-                all_test_outputs.append([0,0,0,0,1])
-            break
 
-        if f not in all_fold_numbers:
-            continue
+        validation_fold = True
+        test_index = [i for i, x in enumerate(list_folds) if x == f]
+        for val in list_folds:
+            if val != f:
+                validation_fold_num = val
+                break
+        val_index = [i for i, x in enumerate(list_folds) if x == validation_fold_num]
+        train_index = [i for i, x in enumerate(list_folds) if x != f and x != validation_fold_num]
 
-        validation_fold = False
-        val_index = []
-        epochs = 100
-
-        # if there are only 2 folds in the set
-        if len(all_fold_numbers) == 2:
-            test_index = [i for i, x in enumerate(folds) if x == f]
-            train_index = [i for i, x in enumerate(folds) if x != f]
-            epochs = 60
-
-        # if there are at least 3 fold numbers, we can use one for validation
-        if len(all_fold_numbers) > 2:
-            validation_fold = True
-            test_index = [i for i, x in enumerate(folds) if x == f]
-            for val in folds:
-                if val != f:
-                    validation_fold_num = val
-                    break
-            val_index = [i for i, x in enumerate(folds) if x == validation_fold_num]
-            train_index = [i for i, x in enumerate(folds) if x != f and x != validation_fold_num]
-
-
-        run+=1
-        print("Problem:", str(prob_number), "/", all_prob_len)
+        run += 1
         print("Training fold:", f, "/", 10)
-
-        print("TRAIN:", train_index, "TEST:", test_index, "VAL:", val_index)
+        epochs = 250
+        # print("TRAIN:", train_index, "TEST:", test_index, "VAL:", val_index)
 
         X_train, X_test = answers[train_index], answers[test_index]
         X_train_seqs = seq_lengths[train_index]
         X_test_seqs = seq_lengths[test_index]
         y_train, y_test = labels[train_index], labels[test_index]
-
 
         if validation_fold:
             X_validation, y_validation = answers[val_index], labels[val_index]
@@ -358,13 +330,13 @@ def train_test_per_problem(problem_id, prob_number, all_prob_len, dataset_name, 
         X_train = X_train.reshape(-1, answers.shape[1]).to(device)
         X_test = X_test.reshape(-1, answers.shape[1]).to(device)
 
-
         # Free up gpu memory
         torch.cuda.empty_cache()
 
-        model = LSTMClassifier(batch_size, num_classes, hidden_size, num_layers, vocab_length, embedding_length, weights_matrix)
+        model = LSTMClassifier(batch_size, num_classes, hidden_size, num_layers, vocab_length, embedding_length,
+                               weights_matrix)
         model = model.to(device)
-            # (input_size, hidden_size, num_layers, num_classes).to(device)
+        # (input_size, hidden_size, num_layers, num_classes).to(device)
 
         optimizer = optim.Adam(model.parameters(), lr=learning_rate)
         criterion = nn.CrossEntropyLoss()
@@ -385,7 +357,7 @@ def train_test_per_problem(problem_id, prob_number, all_prob_len, dataset_name, 
             optimizer.step()
 
             count += 1
-            print ("#" + str(count) + " Loss: " + str(loss))
+            print("#" + str(count) + " Loss: " + str(loss))
 
             # val is low but slightly higher than training loss is ideal
             if validation_fold:
@@ -393,26 +365,18 @@ def train_test_per_problem(problem_id, prob_number, all_prob_len, dataset_name, 
                 loss_val = criterion(output_validation, torch.max(y_validation, 1)[1])
                 loss_val.backward()
                 optimizer.step()
-                # print("Validation loss is:", loss_val.item(), "Training loss is:", loss.item())
+                print("Validation loss is:", loss_val.item(), "Training loss is:", loss.item())
                 if round(loss_val.item(), 4) >= round(loss.item(), 4):
                     break
 
-
-        # Get the mean and std from the training set
-
-        # train_predictions = model(answers)
-        # # _, train_predictions = torch.max(test_output.data, 1)
-        # train_predictions = train_predictions.cpu()
-        # train_predictions = train_predictions.squeeze(0)
-
         # Save weights
-        save_weights(model, problem_id)
-        # col_means, col_stds = get_mean_std_each_class(train_predictions)
-        # all_col_means.append(col_means)
-        # all_col_stds.append(col_stds)
+        save_weights(model, f)
 
         # Test
         test_output = model(X_test, 1, X_test_seqs)
+        print("adding to all_test_outputs")
+        print(test_output)
+        print(len(test_output))
         all_test_outputs.extend(test_output.tolist())
 
         test_order.extend(test_index)
@@ -422,14 +386,14 @@ def train_test_per_problem(problem_id, prob_number, all_prob_len, dataset_name, 
         answers = answers.squeeze(0)
         labels = labels.squeeze(0)
 
-
     if test_fold:
         sorted_tests = [x for _, x in sorted(zip(test_order, all_test_outputs))]
         all_test_outputs = sorted_tests
 
-    auc, rmse, kappa, multi_kappa = acc_vs_predicted(labels, all_test_outputs)
-
-
+    print(labels)
+    print(len(all_test_outputs))
+    print(all_test_outputs)
+    auc, rmse, kappa, multi_kappa = acc_vs_predicted(labels.tolist(), all_test_outputs)
 
     # z_score_output = z_score_output.numpy()
 
@@ -460,7 +424,6 @@ def train_test_per_problem(problem_id, prob_number, all_prob_len, dataset_name, 
 
     print("number of auc values:", len(auc_each_loop))
 
-
     if len(auc_each_loop) > 0:
         average_auc = sum(auc_each_loop) / len(auc_each_loop)
     average_rmse = sum(rmse_each_loop) / len(rmse_each_loop)
@@ -475,10 +438,9 @@ def train_test_per_problem(problem_id, prob_number, all_prob_len, dataset_name, 
     print("Average Kappa:", average_kappa)
     print("Average Multi Kappa:", average_multi_kappa)
 
-
     return average_auc, average_rmse, average_kappa, average_multi_kappa, final_pred_df
 
-def train_test_all_problems(master_df, all_problems, dataset_name, vocab_list, weights_matrix):
+def train_test_all_folds(master_df, dataset_name, vocab_list, weights_matrix):
     overall_auc = []
     final_auc = 0
     overall_rmse = []
@@ -491,35 +453,28 @@ def train_test_all_problems(master_df, all_problems, dataset_name, vocab_list, w
 
     all_final_predictions = pd.DataFrame()
 
-    #test_problem_ids = [1070912] #has one response
-    # list_problems_individual_traditional["problem_id"]
 
-    for pid in all_problems["problem_id"]:
-    #for pid in test_problem_ids:
-        count+=1
-        all_prob_len = str(len(all_problems["problem_id"]))
-        print("/////////////////////////// Problem: " + str(count) +"/" + all_prob_len + ": " + str(pid))
-        average_auc, rmse_each_loop, kappa_each_loop, multi_kappa_each_loop, final_predictions_each_loop= train_test_per_problem(pid, count, all_prob_len, dataset_name, master_df, vocab_list, weights_matrix)
+    average_auc, rmse_each_loop, kappa_each_loop, multi_kappa_each_loop, final_predictions_each_loop= train_test_per_fold(master_df, dataset_name, vocab_list, weights_matrix)
 
-        # Append to final pred dataframe
-        if final_predictions_each_loop.empty == False:
-            all_final_predictions = all_final_predictions.append(final_predictions_each_loop)
-        print(all_final_predictions)
+    # Append to final pred dataframe
+    if final_predictions_each_loop.empty == False:
+        all_final_predictions = all_final_predictions.append(final_predictions_each_loop)
+    print(all_final_predictions)
 
 
-        if (average_auc != 0):
-            overall_auc.append(average_auc)
-        if rmse_each_loop != -1 or kappa_each_loop !=-1 or multi_kappa_each_loop !=-1:
-            overall_rmse.append(rmse_each_loop)
-            overall_kappa.append(kappa_each_loop)
-            overall_multi_kappa.append(multi_kappa_each_loop)
+    if (average_auc != 0):
+        overall_auc.append(average_auc)
+    if rmse_each_loop != -1 or kappa_each_loop !=-1 or multi_kappa_each_loop !=-1:
+        overall_rmse.append(rmse_each_loop)
+        overall_kappa.append(kappa_each_loop)
+        overall_multi_kappa.append(multi_kappa_each_loop)
 
     final_auc = sum(overall_auc) / len(overall_auc)
     final_rmse = sum(overall_rmse) / len(overall_rmse)
     final_kappa = sum(overall_kappa) / len(overall_kappa)
     final_multi_kappa = sum(overall_multi_kappa) / len(overall_multi_kappa)
 
-    all_final_predictions.to_csv("final_predictions_lstm_glove3.csv")
+    all_final_predictions.to_csv("final_predictions_lstm_glove1_all_folds.csv")
 
     print("Final AUC:", final_auc)
     print("Final AUC length:", len(overall_auc))

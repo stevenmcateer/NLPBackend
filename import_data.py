@@ -239,8 +239,9 @@ def load_csv(dataset):
 
 
 def preprocessing(dataset_name):
-    if path.exists("vectorized_" + dataset_name + ".csv"):
-        master_df = pd.read_csv("vectorized_" + dataset_name + ".csv", converters={1: ast.literal_eval, 2: ast.literal_eval})
+    file_name = "vectorized_" + dataset_name + ".csv"
+    if path.exists(file_name):
+        master_df = pd.read_csv(file_name, converters={4: ast.literal_eval, 6: ast.literal_eval})
         # master_df = master_df.astype({'answer': 'list', 'grade': 'list'}, copy=True)
 
         # if 'grader_teacher_id' not in master_df.columns:
@@ -311,7 +312,7 @@ def preprocessing(dataset_name):
             print("Row: " + str(count) +"/" + str(len(cleaned_columns_connected)) + ": " + str(pid))
             # Convert answer to vector
             cleaned_answer = clean_answer(answer)
-            idx_answer = convert_to_idx_vector(dataset_word2idx, answer)
+            idx_answer = convert_to_idx_vector(dataset_word2idx, cleaned_answer)
 
             # Convert grade to one hot
             encoded_grade = convert_grade(grade)
@@ -413,11 +414,4 @@ def convert_to_idx_vector(dataset_word2idx, sentence):
 
     # Return vectorized answer
     return answer
-
-
-#
-if __name__ == '__main__':
-    # dataset_name = sys.argv[1]
-
-    preprocessing(dataset_name="glove1")
 
