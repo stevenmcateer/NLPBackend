@@ -63,34 +63,35 @@ for i in np.unique(no_missing_text.folds.values):
     test_set = no_missing_text.loc[no_missing_text.folds == i]
     training_set = no_missing_text.loc[no_missing_text.folds != i]
 
-
-
-
     # training_set = no_missing_text.loc[~(no_missing_text.folds == i)]#does the same thing
 
     np.unique(test_set.folds)
     np.unique(training_set.folds)
 
     X_train = training_set.cleaned_answer_text.values
-    print("X_train\n", X_train)
-    print(len(X_train))
+    # print("X_train\n", X_train)
+    # print(len(X_train))
     X_test = test_set.cleaned_answer_text.values
     y_train = training_set[['grade_0', 'grade_1', 'grade_2', 'grade_3', 'grade_4']].values
-    print("y_train\n", y_train)
+    # print("y_train\n", y_train)
     y_test = test_set[['grade_0', 'grade_1', 'grade_2', 'grade_3', 'grade_4']].values
 
     ##########transform the training data to the counting vector (matches the counts to our full corpus)
     counting_words_training_traditional = counting_tool_traditional.transform(X_train)###this is transforming
-    counting_words_training_traditional
+
     term_freq_words_transform_training_traditional = term_freq_tool_traditional.transform(counting_words_training_traditional)
+    print("X_freq_words:", term_freq_words_transform_training_traditional.shape)
+    print("X_train_len:", len(X_train))
+    print("y_train_len:", len(y_train))
+
     ########## transform the test data
     counting_words_training_traditional_test = counting_tool_traditional.transform(X_test)  ###this is transforming
     term_freq_words_transform_training_traditional_test = term_freq_tool_traditional.transform(counting_words_training_traditional_test)
 
-
-
-
     ########## FIT THE RANDOM FOREST
+    print("fitting this shit with:")
+    print("X_train_tfidf\n", term_freq_words_transform_training_traditional, "\n")
+    print("y_train\n", y_train)
     random_forest = rf_model.fit(term_freq_words_transform_training_traditional, pd.DataFrame(y_train))
 
     rf_predict_traditional = random_forest.predict_proba(term_freq_words_transform_training_traditional_test)

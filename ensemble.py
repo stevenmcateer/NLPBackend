@@ -9,24 +9,27 @@ from sklearn.metrics import roc_auc_score
 from sklearn.metrics import mean_squared_error
 import math
 
-# load the boston dataset
+# load the datasets
 lstm_preds = pd.read_csv("predictions_lstm_glove1.csv")
 lstm_all = pd.read_csv("predictions_lstm_glove1_all_folds.csv")
 rf_preds = pd.read_csv("rf_predictions_fold.csv")
+rf_prob_level = pd.read_csv("rf_predictions_prob_level.csv")
+
 full_connected = pd.read_csv("vectorized_glove1.csv", converters={4: ast.literal_eval}, encoding="latin1")
 full_connected = full_connected[["problem_log_id", "grader_teacher_id", "encoded_grade", "folds"]]
 
-
-
 merged_preds = lstm_preds.merge(rf_preds, on=["problem_log_id", "grader_teacher_id"])
 all_preds = merged_preds.merge(lstm_all, on=["problem_log_id", "grader_teacher_id"])
+final_preds = all_preds.merge(rf_prob_level, on=["problem_log_id", "grader_teacher_id"])
+print(final_preds)
 
-merged_w_labels = all_preds.merge(full_connected, on=["problem_log_id", "grader_teacher_id"])
+merged_w_labels = final_preds.merge(full_connected, on=["problem_log_id", "grader_teacher_id"])
 complete_X_y = merged_w_labels[["problem_log_id", "grader_teacher_id","folds", "grade_1_prob", "grade_2_prob", "grade_3_prob", "grade_4_prob", "grade_5_prob",
                        "grade_1_prob_all", "grade_2_prob_all", "grade_3_prob_all", "grade_4_prob_all", "grade_5_prob_all",
-                       "grade_1_rf", "grade_2_rf", "grade_3_rf", "grade_4_rf", "grade_5_rf", "encoded_grade"]]
+                       "grade_1_rf", "grade_2_rf", "grade_3_rf", "grade_4_rf", "grade_5_rf",
+                       "grade_1_rf_prob", "grade_2_rf_prob", "grade_3_rf_prob", "grade_4_rf_prob", "grade_5_rf_prob", "encoded_grade"]]
 
-features = complete_X_y.columns[3:14]
+features = complete_X_y.columns[3:23]
 print("Features:", features)
 
 
@@ -45,15 +48,15 @@ for i in unique_folds:
     training_set = complete_X_y.loc[complete_X_y.folds != i]
 
     X_test = test_set[["grade_1_prob", "grade_2_prob", "grade_3_prob", "grade_4_prob", "grade_5_prob",
-                      "grade_1_prob_all", "grade_2_prob_all", "grade_3_prob_all", "grade_4_prob_all",
-                      "grade_5_prob_all",
-                      "grade_1_rf", "grade_2_rf", "grade_3_rf", "grade_4_rf", "grade_5_rf"]].values
+                      "grade_1_prob_all", "grade_2_prob_all", "grade_3_prob_all", "grade_4_prob_all", "grade_5_prob_all",
+                      "grade_1_rf", "grade_2_rf", "grade_3_rf", "grade_4_rf", "grade_5_rf",
+                       "grade_1_rf_prob", "grade_2_rf_prob", "grade_3_rf_prob", "grade_4_rf_prob", "grade_5_rf_prob"]].values
     y_test = list(test_set["encoded_grade"].values)
 
     X_train = training_set[["grade_1_prob", "grade_2_prob", "grade_3_prob", "grade_4_prob", "grade_5_prob",
-                      "grade_1_prob_all", "grade_2_prob_all", "grade_3_prob_all", "grade_4_prob_all",
-                      "grade_5_prob_all",
-                      "grade_1_rf", "grade_2_rf", "grade_3_rf", "grade_4_rf", "grade_5_rf"]].values
+                      "grade_1_prob_all", "grade_2_prob_all", "grade_3_prob_all", "grade_4_prob_all", "grade_5_prob_all",
+                      "grade_1_rf", "grade_2_rf", "grade_3_rf", "grade_4_rf", "grade_5_rf",
+                      "grade_1_rf_prob", "grade_2_rf_prob", "grade_3_rf_prob", "grade_4_rf_prob", "grade_5_rf_prob"]].values
     y_train = list(training_set["encoded_grade"].values)
 
 
@@ -78,7 +81,6 @@ for i in unique_folds:
     # all_probs = pd.concat([data_df, all_probs])
     #
     grade_0 = pd.DataFrame(y_predict[0])
-    # grade_0 = pd.DataFrame(rf_predict_traditional_ovr[0])
     grade_0.rename(columns={0: 'no_0'}, inplace=True)
     grade_0.rename(columns={1: 'yes_0'}, inplace=True)
     grade_1 = pd.DataFrame(y_predict[1])
@@ -121,11 +123,24 @@ for i in unique_folds:
     saved_predictions['grader_teacher_id'] = test_set['grader_teacher_id'].values
     list_predictions.append(np.array(saved_predictions))
 
+random_forest_predictions = pd.DataFrame(np.concatenate(list_predictions))
+
+random_forest_predictions[5] = random_forest_predictions[5].astype('int')
+random_forest_predictions.rename(columns={0: 'grade_1_en'}, inplace=True)
+random_forest_predictions.rename(columns={1: 'grade_2_en'}, inplace=True)
+random_forest_predictions.rename(columns={2: 'grade_3_en'}, inplace=True)
+random_forest_predictions.rename(columns={3: 'grade_4_en'}, inplace=True)
+random_forest_predictions.rename(columns={4: 'grade_5_en'}, inplace=True)
+random_forest_predictions.rename(columns={5: 'problem_log_id'}, inplace=True)
+random_forest_predictions.rename(columns={6: 'grader_teacher_id'}, inplace=True)
+random_forest_predictions['grader_teacher_id']=random_forest_predictions['grader_teacher_id'].astype('int')
+
+random_forest_predictions.to_csv('ensemble_predictions_all_4_1124.csv', index = False)
 
 final_auc = np.mean(all_auc)
 print("Final AUC:", final_auc)
 final_rmse = np.mean(all_rmse)
-print("Final AUC:", final_rmse)
+print("Final RMSE:", final_rmse)
 
 importances = rf_model.feature_importances_
 print(list(zip(features, importances)))
